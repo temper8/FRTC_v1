@@ -1,0 +1,296 @@
+ ASDEX-Upgrade
+ Name	Time	Value	Error
+RTOR            1.6
+ELONM           1.7
+TRICH           .3
+AB              .6
+ABC             .5
+BTOR            2.5
+ELONG           1.7
+TRIAN           .3
+IPL      0.     1.
+AMJ             2.
+ZMJ             1.
+NB1             101
+NNCL    1.      .001               cold  10#19 m-3
+NNWM            .0001              warm  10#19 m-3
+
+-----------------------------------    Arrays	----------------------------------------
+
+*********************************** TEX *********************************** 
+****	Quantity TEX is given in the old standard. Note that the number of grid points can be variable.
+POINTS  20
+TEX   0.00 1.07 1.07 1.05 1.02 0.97 0.92 0.85 0.78 0.71 0.63 0.56 0.49 0.43 0.37 0.32 0.27 0.22 0.17 0.13 0.09 0.06
+POINTS  16
+TE    0.2  1.15 1.14 1.09 1.02 0.94 0.86 0.78 0.71 0.65 0.60 0.55 0.50 0.44 0.36 0.25 0.15
+TEX   0.3  1.98 1.95 1.86 1.72 1.55 1.37 1.20 1.04 0.89 0.76 0.65 0.54 0.44 0.34 0.24 0.15
+TE    0.4  1.96 1.93 1.86 1.74 1.59 1.43 1.27 1.11 0.96 0.83 0.70 0.58 0.46 0.35 0.24 0.15
+TE    0.5  1.69 1.67 1.62 1.55 1.45 1.33 1.21 1.07 0.94 0.80 0.67 0.55 0.43 0.32 0.22 0.14
+TE    0.6  2.06 2.02 1.91 1.75 1.56 1.37 1.19 1.04 0.92 0.83 0.75 0.68 0.60 0.50 0.37 0.23
+****	The last time slice is given by the U-file "@00000.tes"
+TEX	U-file: @00000.tes		factor: 1.	(time=0.8, points=41)
+
+*********************************** NEX *********************************** 
+****	NEX is determined at t=0 as old-type input
+****	and at t=0.5s as a new one
+POINTS  21	GRIDTYPE 1	NAMEXP NE	NTIMES 1
+0.
+4.79 4.78 4.76 4.74 4.70 4.66 4.61 4.55 4.49 4.44 4.38 4.32 4.27 4.20 4.12 4.02 3.82 3.35 2.63 1.91 1.32
+POINTS	20	GRIDTYPE 1	NTIMES 1	NAMEXP NE
+ .5
+5.40 5.41 5.44 5.49 5.56 5.69 5.88 6.15 6.49 6.85 6.99 6.88 6.53 5.94 5.23 4.46 3.62 2.81 2.08 1.45
+
+*********************************** CAR1X *********************************** 
+****	The input for CAR1X combine of different input modes
+****	By default time is set to 0 here
+GRIDTYPE	19	POINTS	10	NAMEXP	CAR1
+.0
+1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0
+ 1   2   3   4   5   6   5   4   3   2 
+POINTS  11
+CAR1  0.10 1.07 1.05 0.97 0.85 0.71 0.56 0.43 0.32 0.22 0.13 0.06
+GRIDTYPE	19	POINTS	10	NAMEXP	CAR1	NTIMES 2
+.2    .3	these are time[s]
+ .01		      and z
+1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0
+ 1   2   3   4   5   6   5   4   3   2 
+ 1   2   3   4   5   5   5   4   3   2 
+GRIDTYPE	18	POINTS	14	NAMEXP	CAR1	NTIMES 1
+.4		these are time[s]
+ 1.6		      and R
+-.7 -.65 -.6   -.55 -.5  -.45 -.4  -.3  -.2  .0  .1   .15 .25 .35
+ 1    2    3    4    5    6    7    8   8.5   10  9.5  9   8   7.5 
+GRIDTYPE	18	POINTS	14	NAMEXP	CAR1	NTIMES 1
+.5		these are time[s]
+ 1.7		      and R
+-.7 -.65 -.6   -.55 -.5  -.45 -.4  -.3  -.2  .0  .1   .15 .25 .35
+ 1    2    3    4    5    6    7    8   8.5   10  9.5  9   8   7.5 
+GRIDTYPE	18	POINTS	14	NAMEXP	CAR1	NTIMES 1
+.6		these are time[s]
+ 1.8		      and R
+-.7 -.65 -.6   -.55 -.5  -.45 -.4  -.3  -.2  .0  .1   .15 .25 .35
+ 1    2    3    4    5    6    7    8   8.5   10  9.5  9   8   7.5 
+
+*********************************** CAR2X *********************************** 
+****	The array CAR2X shows a parabolic profile along a sweeping chord
+****	Note that small truncation errors in the input data cause large 
+****	extrapolation errors when time=0.2s  
+POINTS	11	GRIDTYPE	20	NAMEXP	CAR2	NTIMES 1
+0.
+  1.10  1.20  1.30  1.40  1.50  1.60  1.70  1.80  1.90  2.00  2.10
+ -0.56 -0.53 -0.50 -0.48 -0.45 -0.43 -0.40 -0.37 -0.35 -0.32 -0.29
+ -0.43 -0.03  0.24  0.45  0.59  0.66  0.66  0.59  0.44  0.20 -0.12
+POINTS	11	GRIDTYPE	20	NAMEXP	CAR2	NTIMES 1
+0.2
+  1.10  1.20  1.30  1.40  1.50  1.60  1.70  1.80  1.90  2.00  2.10
+ -0.43 -0.41 -0.39 -0.37 -0.35 -0.33 -0.30 -0.28 -0.26 -0.24 -0.22
+ -0.25  0.12  0.39  0.59  0.73  0.79  0.78  0.69  0.52  0.27 -0.07
+POINTS	11	GRIDTYPE	20	NAMEXP	CAR2	NTIMES 1
+0.4
+  1.10  1.20  1.30  1.40  1.50  1.60  1.70  1.80  1.90  2.00  2.10
+ -0.30 -0.28 -0.27 -0.25 -0.24 -0.23 -0.21 -0.20 -0.18 -0.17 -0.15
+ -0.12  0.24  0.51  0.72  0.84  0.89  0.87  0.76  0.58  0.31 -0.03
+POINTS	11	GRIDTYPE	20	NAMEXP	CAR2	NTIMES 1
+0.6
+  1.10  1.20  1.30  1.40  1.50  1.60  1.70  1.80  1.90  2.00  2.10
+ -0.16 -0.16 -0.15 -0.14 -0.13 -0.13 -0.12 -0.11 -0.10 -0.09 -0.09
+ -0.04  0.32  0.60  0.80  0.92  0.97  0.93  0.82  0.62  0.35 -0.01
+POINTS	11	GRIDTYPE	20	NAMEXP	CAR2	NTIMES 1
+0.8
+  1.10  1.20  1.30  1.40  1.50  1.60  1.70  1.80  1.90  2.00  2.10
+ -0.03 -0.03 -0.03 -0.03 -0.03 -0.03 -0.02 -0.02 -0.02 -0.02 -0.02
+  0.00  0.36  0.64  0.84  0.96  1.00  0.96  0.84  0.64  0.36  0.00
+POINTS	11	GRIDTYPE	20	NAMEXP	CAR2	NTIMES 1
+1.0
+  1.10  1.20  1.30  1.40  1.50  1.60  1.70  1.80  1.90  2.00  2.10
+  0.10  0.09  0.09  0.08  0.08  0.07  0.07  0.07  0.06  0.06  0.05
+ -0.01  0.35  0.63  0.83  0.95  0.99  0.95  0.83  0.63  0.35  0.00
+POINTS	11	GRIDTYPE	20	NAMEXP	CAR2	NTIMES 1
+1.2
+  1.10  1.20  1.30  1.40  1.50  1.60  1.70  1.80  1.90  2.00  2.10
+  0.23  0.22  0.21  0.20  0.19  0.17  0.16  0.15  0.14  0.13  0.12
+ -0.07  0.28  0.56  0.76  0.89  0.93  0.90  0.79  0.60  0.33 -0.02
+POINTS	11	GRIDTYPE	20	NAMEXP	CAR2	NTIMES 1
+1.4
+  1.10  1.20  1.30  1.40  1.50  1.60  1.70  1.80  1.90  2.00  2.10
+  0.36  0.34  0.33  0.31  0.29  0.27  0.26  0.24  0.22  0.21  0.19
+ -0.18  0.18  0.46  0.66  0.79  0.84  0.82  0.73  0.55  0.29 -0.05
+
+*********************************** CAR3X *********************************** 
+****	Array CAR3X gives a parabolic profile along a moving horizontal chord: 
+POINTS	11	GRIDTYPE	19	NAMEXP	CAR3	NTIMES 1
+0.
+ -0.65
+  1.10  1.20  1.30  1.40  1.50  1.60  1.70  1.80  1.90  2.00  2.10
+ -0.58 -0.22  0.04  0.20  0.29  0.32  0.29  0.20  0.04 -0.22 -0.58
+POINTS	11	GRIDTYPE	19	NAMEXP	CAR3	NTIMES 1
+0.1
+ -0.45
+  1.10  1.20  1.30  1.40  1.50  1.60  1.70  1.80  1.90  2.00  2.10
+ -0.28  0.07  0.31  0.49  0.59  0.62  0.59  0.49  0.31  0.07 -0.28
+POINTS	11	GRIDTYPE	19	NAMEXP	CAR3	NTIMES 1
+0.3
+ -0.25
+  1.10  1.20  1.30  1.40  1.50  1.60  1.70  1.80  1.90  2.00  2.10
+ -0.09  0.26  0.53  0.72  0.83  0.87  0.83  0.72  0.53  0.26 -0.09
+POINTS	11	GRIDTYPE	19	NAMEXP	CAR3	NTIMES 1
+0.5
+ -0.05
+  1.10  1.20  1.30  1.40  1.50  1.60  1.70  1.80  1.90  2.00  2.10
+  0.00  0.36  0.64  0.83  0.95  0.99  0.95  0.83  0.64  0.36  0.00
+POINTS	11	GRIDTYPE	19	NAMEXP	CAR3	NTIMES 1
+0.7
+  0.15
+  1.10  1.20  1.30  1.40  1.50  1.60  1.70  1.80  1.90  2.00  2.10
+  0.00  0.36  0.64  0.83  0.95  0.99  0.95  0.83  0.64  0.36  0.00
+  0.15  0.15  0.15  0.15  0.15  0.15  0.15  0.15  0.15  0.15  0.15
+POINTS	11	GRIDTYPE	19	NAMEXP	CAR3	NTIMES 1
+0.9
+  0.35
+  1.10  1.20  1.30  1.40  1.50  1.60  1.70  1.80  1.90  2.00  2.10
+ -0.17  0.18  0.43  0.61  0.72  0.76  0.72  0.61  0.43  0.18 -0.17
+POINTS	11	GRIDTYPE	19	NAMEXP	CAR3	NTIMES 1
+1.1
+  0.55
+  1.10  1.20  1.30  1.40  1.50  1.60  1.70  1.80  1.90  2.00  2.10
+ -0.42 -0.05  0.18  0.34  0.44  0.47  0.44  0.34  0.18 -0.05 -0.42
+
+*********************************** CAR4X *********************************** 
+****	Array CAR4X gives a parabolic profile along a moving vertical chord: 
+POINTS	10	GRIDTYPE	18	NAMEXP	CAR4	NTIMES 1
+0.0
+  1.30
+ -0.81 -0.64 -0.47 -0.30 -0.13  0.04  0.21  0.38  0.55  0.72
+ -0.26  0.06  0.29  0.49  0.61  0.64  0.56  0.39  0.18 -0.08
+POINTS	10	GRIDTYPE	18	NAMEXP	CAR4	NTIMES 1
+0.25
+  1.50
+ -0.81 -0.64 -0.47 -0.30 -0.13  0.04  0.21  0.38  0.55  0.72
+  0.04  0.31  0.56  0.78  0.93  0.96  0.87  0.68  0.44  0.17
+POINTS	10	GRIDTYPE	18	NAMEXP	CAR4	NTIMES 1
+0.5
+  1.70
+ -0.81 -0.64 -0.47 -0.30 -0.13  0.04  0.21  0.38  0.55  0.72
+  0.04  0.31  0.56  0.78  0.93  0.96  0.87  0.68  0.44  0.17
+POINTS	10	GRIDTYPE	18	NAMEXP	CAR4	NTIMES 1
+0.75
+  1.90
+ -0.81 -0.64 -0.47 -0.30 -0.13  0.04  0.21  0.38  0.55  0.72
+ -0.26  0.06  0.29  0.49  0.61  0.64  0.56  0.39  0.18 -0.08
+
+*********************************** PRADX *********************************** 
+POINTS	10	GRIDTYPE 1	NAMEXP PRAD	NTIMES 3
+0. .03  .06
+ 1.683072E-02 1.835108E-02 2.118123E-02 2.511000E-02 3.063486E-02
+ 3.730636E-02 4.366064E-02 4.700778E-02 4.493699E-02 3.684750E-02
+ 1.10 0.95 0.78 0.63 0.51 0.45 0.37 0.25 0.13 0.04
+ 1.683072E-02 1.835108E-02 2.118123E-02 2.511000E-02 3.063486E-02
+ 3.730636E-02 4.366064E-02 4.700778E-02 4.493699E-02 3.684750E-02
+POINTS	10	GRIDTYPE 0	NAMEXP PRAD	NTIMES 1
+ .1
+ 1.683072E-02 1.835108E-02 2.118123E-02 2.511000E-02 3.063486E-02
+ 3.730636E-02 4.366064E-02 4.700778E-02 4.493699E-02 3.684750E-02
+POINTS	10	GRIDTYPE 1	NAMEXP PRAD	NTIMES 1
+ .13
+ 1.683072E-02 1.835108E-02 2.118123E-02 2.511000E-02 3.063486E-02
+ 3.730636E-02 4.366064E-02 4.700778E-02 4.493699E-02 3.684750E-02
+POINTS	10	GRIDTYPE 2	NAMEXP PRAD	NTIMES 1
+ .16
+ 1.683072E-02 1.835108E-02 2.118123E-02 2.511000E-02 3.063486E-02
+ 3.730636E-02 4.366064E-02 4.700778E-02 4.493699E-02 3.684750E-02
+
+POINTS  11	GRIDTYPE 10	NAMEXP PRAD	NTIMES 1
+.2
+.0  .05   .1   .15   .2   .25   .3   .35   .4   .45   .5   
+ 1.613903E-02 1.683072E-02 1.835108E-02 2.118123E-02 2.511000E-02 3.063486E-02
+ 3.730636E-02 4.366064E-02 4.700778E-02 4.493699E-02 3.684750E-02
+PRAD	u-file:1D.tmp				1D-file 21x(1+1)
+PRAD	u-file:2D.tmp				2D-file 21x(1+31)
+
+*********************************** ZEFX *********************************** 
+POINTS  21
+ZEF   1.50 1.30 1.30 1.30 1.30 1.30 1.30 1.30 1.30 1.30 1.30 1.30 1.30 1.30 1.30 1.30 1.30 1.30 1.30 1.30 1.30 1.30
+
+*********************************** TIX *********************************** 
+TIX	U-file: @00000.tis	factor: 10.
+
+END
+
+		Main Rules for Array Data Input
+
+ NOTE:	All lines with a leading blanck (i.e. space or tab) are commentary lines !
+	This rule is not applicable to a group of data lines which follows a command line.
+	   Only the lines started with ASTRA special strings are regarded as command lines.
+	   Such a "special string" is one of
+	POINTS
+	GRIDTYPE
+	NAMEXP
+	NTIMES
+	END
+	ASTRA_variable_name
+	ASTRA_external_array_name
+
+    where
+	"END" stops further reading of the file [in the recent versions (> 5.0) can be omitted].
+	"ASTRA_variable_names"	      are those in COMMON-BLOCK /A_PARAMETERS/ (file "for/const.inc")
+	"ASTRA_external_array_names"  are specified by array EXARMN, see BLOCKDATA
+	      These names are all terminated with "X" which, if omitted, is then added by ASTRA.
+	      In other words, inside this file the names like TE and TEX are synonyms.
+
+ A. Description line includes up to 4 control parameters which are
+    POINTS   - number of grid points
+    GRIDTYPE - takes integer values from 0 till 20
+    NAMEXP   - character*6 one of 40 specified names (BLOCKDATA, array EXARMN)
+    NTIMES   - number of time slices in the current group
+
+     1) If only POINTS descriptor appears in a control line then the subsequent group
+	is treated as in previous (smaller than 5.0) versions. 
+	   In this case, the next line must be (i) started with one of "ASTRA_external_array_names"
+	   which, in turn, (ii) is followed by time and (iii) array*POINTS of input data.	
+	   GRIDTYPE is then specified with the parameter XINPUT.
+
+     2) If no time evolution is considered NTIMES can be omitted.
+
+     3)  0 <= GRIDTYPE < 10 means equidistant grid
+	10 <= GRIDTYPE <= 20 	   arbitrary  grid 
+
+	GRIDTYPE = 0,10		0 <= a <= AB
+	GRIDTYPE = 1,11		0 <= a <= ABC
+	GRIDTYPE = 2,12		0 <= rho/ROC <= 1 (rho_toroidal)
+	GRIDTYPE = 3,13	 sqrt{[Psi(j)-Psi(0)]/[Psi_edge-Psi(0)]} rho_pol
+	GRIDTYPE = 4,14		sqrt{V(rho)/V_tot} rho_volume
+	GRIDTYPE = 5,15		Psi
+	GRIDTYPE = 16		Phi		dimensional grid in V*s
+	GRIDTYPE = 18	   	{r_0,z_j}	vertical   chord
+	GRIDTYPE = 19	   	{r_j,z_0}	horizontal chord
+	GRIDTYPE = 20	   	{r_j,z_j}	2D grid
+
+ B. After a description line follows a set of data in arbitrary format
+    which includes
+    1) Time array of NTIMES data 
+	(this can be absent if NTIMES is omitted, then TIME is set to 0.)
+    2) Grid coordinate array[s] of N data
+	N=0  	 	if   0 <= GRIDTYPE <= 9  (the grid array is omitted)
+	N=POINTS   	if  10 <= GRIDTYPE <= 17 
+	N=POINTS+1	if  18 <= GRIDTYPE <= 19
+	N=2*POINTS   	if        GRIDTYPE = 20
+    3) Data array of min(1,NTIMES)*POINTS data
+
+ C. {A + B} form one input group. 
+    The total number of groups is restricted by a size of allocated arrays.
+   
+ D. U-FILE input can alternate with other input types
+    It is specified with a command line. Blancks inside the line are ignored. 
+    The command line which must  
+    1) start with a name of the input quantity (same as NAMEXP) 
+    2) include the indication "U-file" (case unsensitive) followed by the symbol ":" 
+    3) and by a name of the U-file to read
+
+    Allowed types of the radial coordinate in a U-file are
+	   Label			Unit
+ 	Minor Radius   			 m
+ 	Major Radius        		 m
+ 	Rho Toroidal		      normalized
+ 	Poloidal Flux		      normalized
+
+

@@ -1,0 +1,190 @@
+!DELVAR = 1.01;
+TAUMAX = 1.e-4;
+DPOUT=1.d-4;  
+DROUT=1.d-4;
+DTOUT=1.d-5;
+TSTART = 0.11;
+TEND = 0.3;
+TINIT=0.178;
+TSCALE = 0.032;
+TPAUSE = 0.2;
+
+     
+!BTOR=1.0d0;
+NEOCL(100)<:;
+!NEOCL2:;
+
+!MIXINT(21,0)::0.12;
+
+
+
+
+
+!!=========Ion temperature============
+!!TI*:Eq:2.5;   ! IYS added a convection
+TI:AS;
+TI=TIX;
+GN2I=1.0;
+PI=-PICX+PINEU+PIONZ-PIREC; !+CAR27+CAR29;
+XI=("work(j,165)"*NDEUT+"work(j,145)"*NHYDR)/(NI+0.001d0)+DN;  ! 
+
+
+CF6 = ABC - 0.02 ! Pedestal position (in minor radius AMETR)  ! IYS
+
+!!!!!!!!!!!!!
+CAR9=(1+2.7*NUIS*NUIS*(AMETR/RTOR)**3);
+CAR3=(-0.17+1.05*NUIS**(0.5)+2.7*NUIS*NUIS*(AMETR/RTOR)**3)/(1+0.7*NUIS**(0.5));
+CAR10=CAR3/CAR9;
+CAR30=0.;    ! to substitute zero wherever I do not understand what should be substituted
+CAR31=1.d3*(TI*GRAD(NI)/NI+CAR10*GRAD(TI))/VR;
+CAR32=-VINT(CAR31);    ! neoclassical electrostatic potential (as a flux surface function)
+VTOR = 1.0d3*GP2*(CAR10-1.0)*GRAD(TI)/(1.d-5+GRAD(FP));
+CAR30X = NN*(NNCL+NNWM);  ! density of neutrals
+CAR31X = 1.5e-6           ! to substitute this for "volume" neutral density
+
+
+!============Stationary FRTC 2014============
+!QLH=ZRD1;
+QLH=0.15d0;
+!QLH=0.12d0*(FRAMP(0.180,0.182)-FJUMP(0.3d0));
+CF1=0.18d0;
+CF2=0.195d0;
+!CF3=1.d-4;
+!lhcd(0.d0,CULH,PELH,CAR12,CAR13,CAR14,CAR15):0.001:0.185::A;
+!CAR12 = power deposition into electrons via collisional damping
+!CAR13 = power deposition into electrons in 'fast mode'
+!CAR14 = power deposition into fast alphas
+!CAR15 = relative density profile of fast alphas
+!CAR16 = amy(rho)
+
+CCD1=VINT(PELHB);   !absorbed QLH power
+CCD2=IINT(CULHB);   !driven current
+CCD3=VINT(CAR12B);  !absorbed power via collisional damping
+
+
+!===========Dynamic FRTC===========
+!QLH=ZRD1;
+!QLH=ZRD45X;
+CF1=0.1d-3;  !interval between lhcd() calls, sec
+CF2=0.180d0;  !first call of lhcd()
+CF3=0.21d0;
+DSTART=0.16;
+debug:0.0001:DSTART::;
+saveprofiles::CF2:CF3:;
+!saveprofiles2::CF2:CF3:;
+lhcd2017(PELH):CF1:CF2:CF3:;
+!lhcd2022(PELH):CF1:CF2:CF3:;
+drivencurrent(CULH,CAR32)::CF2:CF3:;
+
+CD=CULH;   !Externally driven current density profile, MA/m^2
+CCD1=VINT(PELHB);   !absorbed QLH power
+CCD2=IINT(CULHB);   !driven current
+
+!========Current Density===========
+!IPL=0.35*FRAMP(0.12,0.155)+0.15;
+!IPL=ZRD2;
+IPL=0.17;
+CU:Eq;
+CU=0.3;
+CC="work(j,303)"; !+CCMHD;
+!!CC=CCSP+CCMHD;
+CD=CULH;
+CUBS="work(j,301)";
+CAR31=CNHR+CCMHD;
+!CC=CAR31;
+!CC=CNHR+CCMHD; !+CAR32;
+!CC=CAR31;
+
+!!HC=HCKIM;      DC=DCKIM;    XC=XCKIM;
+!!!!HC=HCHR;       DC=DCHR;     XC=XCHR;
+!!CC=CNHR+CCMHD;
+!!!CD=CULH+CUBM;     ! LH & NBI driven current 
+!MU=0.33*FPR+0.33;
+!!!CC=CCSP+CCMHD;
+
+!==========SAW tooth==============
+
+!MIXINT(0,0.003);
+
+!=========Equilibrium solver=========
+NBND = 100;
+NEQUIL = 41;
+
+!==========Plasma Composition=================
+!2.4
+!ZEF=(1.1-0.3)*((1-(AMETR/ABC)**2)**1)+0.3;
+ZEF=1.4; !+0.5*FRAMP(0.190,0.21);
+ZIM1=ZICAR; AIM1=12.0;
+NIZ1=NE*(ZEF-ZMJ)/(ZIM1-ZMJ)/ZIM1;
+NIZ2=0;
+
+CV2=0.2;
+NI=NE*(ZIM1-ZEF)/(ZIM1-ZMJ)/ZMJ;
+NDEUT=(1-CV2)*NI;
+NHYDR=CV2*NI;
+
+!==========NEUT============
+NEUT:;
+NNCL=0.5*2.e-2*(FRAMP(0.1,0.165))*(1-FJUMP(0.165))+0.5*4.5e-3*FJUMP(0.165); 
+NNWM=0.45e-4*(1-FJUMP(0.180));
+!SN=SNNEU*NE+SNEBM;
+SN=SNNEU*NE+CAR20;
+!SNN = SNNEU-SNNR;
+
+!=========DENSITY============
+!CCD4=STEP(-5);
+!!NE:Eq;
+NE:AS;
+!NE=(2.56-0.1)*((1-(AMETR/AB)**2)**2)+0.008;
+!NE=(1-0.01)*((1-(AMETR/ABC)**4)**2)+0.01;
+!NE=(5-0.1)*((1-(AMETR/AB)**2)**1)+0.1;
+CAR17=(2.5-0.8)*((1-(AMETR/0.223)**1.5)**8)+0.79;
+CAR19=(0.8-0.6)*((1-(AMETR/0.223)**15)**2)+0.6;
+CAR18=CAR17*STEP(0.161-AMETR)+CAR19*STEP(AMETR-0.161)+0.001;
+!NE=(1.1-0.3)*((1-(AMETR/ABC)**2)**1)+0.3;
+!NE=CAR19+0.001;
+NE=CAR18+0.001;
+CAR11 = (1.0*(1.0-ASTEP(CF6))+0.10*ASTEP(CF6));  ! 1
+CN=-1.0*SLAT*DN*AMETR/(ABC*ABC*G11);
+!=========Electron temperature=======
+!!TE*:Eq:2.5;     ! IYS added a convection
+!!TEB=0.015*FRAMP(0.12,0.14)+0.015;
+TE:AS;
+ZRD44=1-0.3*(FRAMP(0.2,0.21));
+CAR21=(0.72-0.17)*((1-(AMETR/0.223)**1.5)**7)+0.17;
+CAR22=(0.17-0.02)*((1-(AMETR/0.223)**15)**2)+0.02;
+CAR23=CAR21*STEP(0.171-AMETR)+CAR22*STEP(AMETR-0.171)+0.001;
+TE=CAR23*ZRD44;
+
+!TE=(ZRD44-0.1)*((1-(AMETR/0.223)**1.5)**4)+0.1;
+
+!TE=TEX;
+HE=6.0*(1-FRAMP(0.120,0.135))+(0.9*4.7*(1.-FJUMP(0.165))+2*FJUMP(0.165));
+PEX=PELH;
+PE=POH-PENEU-PENLI-PRAD+PELH;
+
+
+
+
+
+!====================   Radial output  =================================
+J\CU\-1;       Plh\PELH;   Johm\CUOHM\8;   E\UPL/(RTOR+AMETR)/GP2;
+Te\TE\\TEX;	En\CAR24;      CC\CC\-3;      Q\1./MU;
+Jlh\CULH\-1;   Upl\UPL;    Zef\ZEF\-1;     Poh\POH\-2;
+Plh\PELH\-2;   Ne\NE\\NEX;    sig\CAR32\-3;    Chr\CAR31; 
+  
+
+
+!====================  Time output  ===================================
+
+QLh_QLH_-5;
+IPL_IPL_-21;
+IBS_CUBSB_-21;
+Iohm_IOHMB_-10;
+Vexp_ZRD2_2;
+L_LINT_2;
+V_UPLB_2; 
+ICD_ILHB_-21;
+
+
+

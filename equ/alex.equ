@@ -1,0 +1,146 @@
+TSTART = 0.11;
+TEND = 0.203;
+TINIT=0.178;
+TSCALE = 0.022;
+TPAUSE = 0.17;
+
+NEOCL(100)<:;
+
+
+
+
+
+
+!!=========Ion temperature============ !Zadaetsya Ionnaya Temp
+TI:AS;
+TI=TIX; !Ispolzovat exp iz exp file
+GN2I=1.0;
+PI=-PICX+PINEU+PIONZ-PIREC; !+CAR27+CAR29;
+XI=("work(j,165)"*NDEUT+"work(j,145)"*NHYDR)/(NI+0.001d0)+DN;  ! 
+
+
+CF6 = ABC - 0.02 ! Pedestal position (in minor radius AMETR)  ! IYS
+
+!!!!!!!!!!!!!
+CAR9=(1+2.7*NUIS*NUIS*(AMETR/RTOR)**3);
+CAR3=(-0.17+1.05*NUIS**(0.5)+2.7*NUIS*NUIS*(AMETR/RTOR)**3)/(1+0.7*NUIS**(0.5));
+CAR10=CAR3/CAR9;
+CAR30=0.;    ! to substitute zero wherever I do not understand what should be substituted
+CAR31=1.d3*(TI*GRAD(NI)/NI+CAR10*GRAD(TI))/VR;
+CAR32=-VINT(CAR31);    ! neoclassical electrostatic potential (as a flux surface function)
+VTOR = 1.0d3*GP2*(CAR10-1.0)*GRAD(TI)/(1.d-5+GRAD(FP));
+CAR30X = NN*(NNCL+NNWM);  ! density of neutrals
+CAR31X = 1.5e-6           ! to substitute this for "volume" neutral density
+
+
+!============Stationary FRTC 2014============ !Tut vizivaetsya stacionarnaya versiya koda
+QLH=0.12d0;  !Vvodimaya LH moshnost'
+CF1=0.18d0;
+CF2=0.195d0;
+CF3=1.d-4;
+!lhcd(0.d0,CULH,PELH,CAR12,CAR13,CAR14,CAR15):0.001:0.185::A; !vizov subroutine
+!CAR12 = power deposition into electrons via collisional damping
+!CAR13 = power deposition into electrons in 'fast mode'
+!CAR14 = power deposition into fast alphas
+!CAR15 = relative density profile of fast alphas
+!CAR16 = amy(rho)
+
+CCD1=VINT(PELHB);   !absorbed QLH power
+CCD2=IINT(CULHB);   !driven current
+CCD3=VINT(CAR12B);  !absorbed power via collisional damping
+
+
+!===========Dynamic FRTC=========== !Zdes dynamicheskaya
+!QLH=ZRD1;
+!QLH=ZRD45X;
+CF1=0.1d-3;  !interval between lhcd() calls, sec
+CF2=0.180d0;  !first call of lhcd()
+DSTART=0.11;
+debug:0.0001:DSTART::;
+!saveprofiles::CF2::;
+!lhcd2017(PELH):CF1:CF2::;
+!drivencurrent(CULH,CAR32)::CF2::;
+
+CD=CULH;   !Externally driven current density profile, MA/m^2
+CCD1=VINT(PELHB);   !absorbed QLH power
+CCD2=IINT(CULHB);   !driven current
+
+!========Current Density=========== 
+IPL=0.17;
+CU:Eq; !Ispolzovanie standart modeli dlya rascheta plotnosti toka
+CU=0.3; !kakoe to nachalnoe uslovie dlya nego
+CC="work(j,303)"; !+CCMHD;  !provodimost
+CD=CULH;
+CUBS="work(j,301)";  !bootstrap tok
+CAR31=CNHR+CCMHD;
+
+
+!=========Equilibrium solver========= !nastroiki rascheta ravnovesiya plasmi
+NBND = 100;
+NEQUIL = 41;
+
+
+!==========Plasma Composition=================  !sostav plasmi po atomam
+ZEF=1.2; !+0.5*FRAMP(0.190,0.21); !effect zaryad plasmi
+ZIM1=ZICAR; AIM1=12.0;
+NIZ1=NE*(ZEF-ZMJ)/(ZIM1-ZMJ)/ZIM1;
+NIZ2=0;
+
+CV2=0.2;
+NI=NE*(ZIM1-ZEF)/(ZIM1-ZMJ)/ZMJ;  !plotnost ionov
+NDEUT=(1-CV2)*NI;
+NHYDR=CV2*NI;
+
+!==========NEUT============  !neitralnie atomi
+NEUT:;
+NNCL=0.5*2.e-2*(FRAMP(0.1,0.165))*(1-FJUMP(0.165))+0.5*4.5e-3*FJUMP(0.165); 
+NNWM=0.45e-4*(1-FJUMP(0.180));
+SN=SNNEU*NE+CAR20;
+
+
+!=========DENSITY============   !plotnost electronov, tut skleika iz 2 funct
+NE:AS;
+CAR17=(2.39-0.6)*((1-(AMETR/0.23)**1.5)**5)+0.5577;
+CAR19=(0.6-0.01)*((1-(AMETR/0.23)**15)**2)+0.01;
+CAR18=CAR17*STEP(0.151-AMETR)+CAR19*STEP(AMETR-0.151)+0.001;
+NE=CAR18+0.001;
+CAR11 = (1.0*(1.0-ASTEP(CF6))+0.10*ASTEP(CF6));  ! 1
+CN=-1.0*SLAT*DN*AMETR/(ABC*ABC*G11);
+
+
+!=========Electron temperature======= !tak zhe kak i s NE
+TE:AS;
+CAR21=(0.663-0.12)*((1-(AMETR/0.23)**1.5)**4)+0.109;
+CAR22=(0.12-0.012)*((1-(AMETR/0.23)**15)**2)+0.012;
+CAR23=CAR21*STEP(0.171-AMETR)+CAR22*STEP(AMETR-0.171)+0.001; !step eto f=[1;0] ot x
+ZRD44=0.663!-0.3*(FRAMP(0.180,0.190)) !FRAMP - rost so vremenem
+TE=CAR23;
+
+HE=6.0*(1-FRAMP(0.120,0.135))+(0.9*4.7*(1.-FJUMP(0.165))+2*FJUMP(0.165));
+PEX=PELH;
+PE=POH-PENEU-PENLI-PRAD+PELH;  !moshnost
+
+
+
+
+!====================   Radial output  ================================= 
+J\CU\-1;       Plh\PELH;   Johm\CUOHM\8;   E\UPL/RTOR/GP2;
+Poh\POH\-2;    Te\TE\\TEX;   CC\CC\-3;      Q\1./MU;
+Jlh\CULH\-1;   Upl\UPL;    Zef\ZEF\-1;     En\CAR24;
+Plh\PELH\-2;   Ne\NE\\NEX;    sig\CAR32\-3;    Chr\CAR31; 
+  
+
+
+!====================  Time output  ===================================
+QLh_QLH_-5;
+IPL_IPL_-21;
+IBS_CUBSB_-21;
+Iohm_IOHMB_-10;
+ZEF_ZEF(AB)_5.;
+L_LINT_2;
+V_UPLB_2; 
+ICD_ILHB_-21;
+Vexp_ZRD2_-2;
+
+
+

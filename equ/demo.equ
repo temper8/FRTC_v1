@@ -1,0 +1,44 @@
+MESHEQ=41;
+NEUT:.01:::N;
+! Normalized to 1 MW Gaussian function: CAR1=P0*exp{-[(r-cf3)/(a*cf4)]^2}
+FGAUSS(CF3,CF4,CAR1):;
+PEX=QECR*FRAMP(1.,2.)*CAR1;
+
+NE:AS;		NE=CF1*NEX;
+ 
+TE*:;		TE=CF2+FPR;		TEB=CF2;
+PRAD=CF6*(.02+.03*FPR);
+PE=PJOUL-PRAD-PENEU-PENLI+PEX;
+HE=CHE3*HATL+HNGSE;
+
+TI*:;		TI=CF2+FPR;		TIB=CF2;
+PI=PINEU;	XI=HE+CHE4*HNASI;
+
+CU:;		CC=CNHR+CCMHD;	CU=CC;
+HC=HCSA;	DC=DCSA;	XC=XCSA;
+
+		Radial output
+Te\TE\-4;		j\CU;		jbs\CUBS;	tria\TRIA;
+Ti\TI\-4;		ne\NE;		mu\MU\1;	shif\SHIF;
+Tex\TEX\-4;		Upl\UPL;	He\HE\-1;	beta\BETAJ;
+Tix\TIX\-4;		sigm\CC;	q\1./MU\5;	elon\ELON;
+
+g11\G11;		g22\G22;	jbs\CUBS;	tria\TRIA;
+V\VR;			g33\G33;	mu\MU\1;	shif\SHIF;
+a\AMETR;		Upl\UPL;	j\CU;		beta\BETAJ;
+Vo\VRO;			IPOL\IPOL;	q\1./MU\5;	elon\ELON;
+
+PiN\-PINEU\-3;		Zeff\ZEF;	He\HE\-1;	Pei\PEICL\-3;
+PeN\PENEU+PENLI\-3;	N\NN\1;		Hinc\CHE4*HNGSI\-1;PEGN\PEGN;
+PGN\PEGN+PIGN\-3;	TN\TN;		Hi\XI\-1;	PeiG\PEIGN\-3;
+PEC\PEX\-3;		Poh\PJOUL\-3;	HAlc\CHE1*HAALC\-1;PIGN\PIGN;
+
+		Time output
+Pinp_QEXB+QJOULB;	<ne>_NEAVB;	ne_NECHC;	Te0_TEC_-3;
+V(a)_UPLB;		_;		Ti0_TIC;	<Te>_TEAVB_-3;
+
+Pech_QEXB;	taux_WTOTB/(QJOULB)_.1;	Wblk_WTOTB_-1;	taui_TAUEIB;
+We_WEB_-1;	tauE_TAUEB_.1;		Wi_WIB_-1;	IT89_TITER_.1;
+
+Poh_QJOULB;		li_LINTB;	betj_BETAJB_1;	q(0)_1./MUC;
+Prad_QRADB;		Ibs_IBSB;
