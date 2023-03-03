@@ -1,6 +1,6 @@
 # Astra Box Workspace
 
-FRTС v1
+FRTC v1
 
 практически оригинальная версия
  
