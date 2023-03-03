@@ -99,7 +99,7 @@ cc******************************************************************
 !! calculation of distribution functions at time t1=t+dtau !!
       do i=1,ntau
        write(*,*)'fokkerplanck №',i,'of',ntau
-       call fokkerplanck(dt,time,i)
+       call fokkerplanck(dt,i,tau,time)
       end do
 !
       deallocate(outjp,outjm,ohjp,ohjm)
@@ -273,36 +273,45 @@ c      pause
       end do
       end
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      subroutine fokkerplanck(dtstep,time,nomer)
+      subroutine fokkerplanck(dtstep,pachka,tay,tim1)
       implicit none
-      real*8 t,dtstep,dtau,d5,check1,check2,check3
-      integer nr,ispl,ip,im,ii,ibeg,nomer,vivod,iunit
+      real*8 t,dtstep,dtau
+      integer nr,ispl,ip,im,ii,ibeg, iunit, iunit1, step, tc, koltoch
       common /a0ab/ nr
-      real*8 ynzm0,pm0,plaunp,plaunm,fmaxw,time,pachka
+      real*8 ynzm0,pm0,plaunp,plaunm,fmaxw,d,dDdX,part,part1
       common/grillspektr/ ynzm0(1001),pm0(1001),ispl
      &,plaunp,plaunm,ip,im
-      integer i0
+      integer i0,iptnew
       parameter(i0=1002)
-      real*8 vij,fij0,fij,dfij,dij,enorm,fst
+      real*8 vij,fij0,fij,dfij,dij,enorm,fst,curtime
       common/lh/vij(i0,100),fij0(i0,100,2),fij(i0,100,2),dfij(i0,100,2)
      &,dij(i0,100,2),enorm(100),fst(100)
-      integer n,i,j,it,nt,k
-      real*8 xend,h,shift,ybeg,yend,tend,dt,dff
-      real*8,dimension(:),allocatable:: y,x,xx,xxm,xxp,a,b,c,f
-      real*8,dimension(:),allocatable:: vj,fj,dfj,d1,d2,d3,givi
+      real*8 dijk,vrjnew
+      common/t01/dijk(101,100,2),vrjnew(101,100,2),iptnew
+      integer n,i,j,it,nt,k,pachka
+      real*8 xend,h,shift,ybeg,yend,tend,dt,dff,tcur,tay,tim1
+      real*8,dimension(:),allocatable:: y,x,xx,f,ddD1,D2,y1
+      real*8,dimension(:),allocatable:: vj,fj,dfj,ft,D1,dD1,dD2
+      real*8,dimension(:),allocatable:: a,b,c,a0,b0,c0
       real*8 znak,alfa2,zero,dt0,h0,eps,r,fvt,fout1,fout2
       common/ef/ alfa2
       real*8 calls
       common/firstcall/calls
-      real*8 d0
-      integer jindex,kindex,klo,khi,ierr,klo1,khi1
-      integer klo2,klo3,khi2,khi3,ierr1,ierr2,ierr3
+      real*8 d0,B1,C1,w
+      real*8 score1
+      real*16 tau1,spacing,curtime0,h1
+      double precision :: minmod,minmod1
+      external B1,C1,w
+      integer jindex,kindex,klo,khi,ierr,i2,i1,klo1,khi1
       common/dddql/ d0,jindex,kindex
-      parameter(zero=0.d0,dt0=0.1d0,h0=0.1d0,eps=1.d-7)
-!
+      parameter(tau1=3.000990745207882E-002)
+      parameter(zero=0.d0,dt0=1.d-1,h0=1.d-1,eps=1.d-7)
+!      real*8 tcur
+      common/testf/ tcur
+!       
       do k=1,2
        kindex=k
-       znak=2.d0*dble(k)-3.d0
+       znak=2.d0*dble(k)-3.d0 !! k=1 znak=-1, in abc Efield with "+"
 !
 !!       do j=1,nr
 !!        fij0(i,j,k)=fmaxw(vij(i,j),znak*enorm(j),dff)
@@ -311,6 +320,17 @@ c      pause
 !
        d0=zero
        do j=1,nr
+       
+c       do i=1,iptnew
+c       write(*,*) dijk(i,j,k), vrjnew(i,j,k)
+c       enddo
+c       pause
+c       do i=1, iptnew
+c       !if (iptnew.ne.0) then
+c       write(*,*) dijk(i,j,1)
+c       !endif
+c       enddo
+c       pause
         jindex=j
         dtau=dtstep*fst(j)
         nt=1
@@ -318,6 +338,7 @@ c      pause
          nt=1+dtau/dt0
         end if
         dt=dtau/nt
+	
         r=dble(j)/dble(nr+1)
         xend=3.d10/fvt(r)
 !!        xend=vij(i0,j)
@@ -327,64 +348,78 @@ c      pause
          n=n+1
          h=xend/dble(n+1)
         end if
-        allocate(y(n),x(n+2),xx(n+1),a(n),b(n),c(n),f(n))
+        allocate(y(n+2),x(n+2),xx(n+1),a(n+1),b(n+1),c(n+1),f(n+1)
+     &,y1(n+1))
 !!!!!! grid !!!!!!!!!
 !!       shift=h*0.1d0 !0.01d0
         do i=1,n+2
          x(i)=h*dble(i-1) !+shift
         end do
+!	write(*,*)'xend=',xend,'n=',n,'h=',h
         do i=1,n+1
          xx(i)=h/2.d0+h*dble(i-1) !+shift
         end do
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        allocate(D1(n+1))
+
+        D1=0d0
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         allocate(vj(i0),fj(i0))
+        
         do i=1,i0
          vj(i)=vij(i,j)
          fj(i)=fij0(i,j,k)
         end do
-        do i=1,n
-         call lock(vj,i0,x(i+1),klo,khi,ierr)
+        
+        
+        do i=1,n+2
+         call lock(vj,i0,x(i),klo,khi,ierr)
          if(ierr.eq.1) then
-          write(*,*)'lock error #1 in finction fokkerplanck'
+          write(*,*)'lock error #1 in function fokkerplanck'
           write(*,*)'j=',j,' v=',x(i+1)
           write(*,*)'vj(1)=',vj(1),' vj(i0)=',vj(i0)
           pause
           stop
          end if
-         call linf(vj,fj,x(i+1),y(i),klo,khi)
+         call linf(vj,fj,x(i),y(i),klo,khi)
         end do
         deallocate(fj)
         ybeg=fij0(1,j,k)  !boundary conditions
-        yend=zero
+        yend=fij0(i0,j,k)
         alfa2=znak*enorm(j)
-!!!!!!!!!!!!!EVALUATING DIFFUSION!!!!!!!!!!!!!!!!!!
-
-	allocate(d1(n+1),d2(n+1),d3(n+1))
-	do i=1,n+1
-	d1(i)=0d0
-	d2(i)=0d0
-	d3(i)=0d0
-	end do
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!solve problem
+        
+        do i=1,n+1
+            y1(i)=y(i+1)
+        end do
+        
         do it=1,nt
-         call abccoef(a,b,c,f,y,dt,n,ybeg,yend,xx,h,d1,d2,d3)
-         call tridag(a,b,c,f,y,n)
-!!         t=dt*dble(it)
+            call abccoef(a,b,c,f,y1,dt,n+1,ybeg,yend,x,xx,h,D1)
+            call tridag(a,b,c,f,y1,n+1)
+            
+        
+        do i=1,n+1
+        if(y1(i).lt.0.d0) then
+        if((y1(i) + epsilon(y1(i))).gt.0.d0) then
+        y1(i)=0.d0
+        else
+        write(*,*) 'y(i)=',y1(i),' lt negative epsilon=',epsilon(y1(i))
+        pause
+        stop
+        endif
+        endif
+        enddo
+        
         end do
-        deallocate(d1,d2,d3)
-	pachka=0.35
-	if(time*nomer.gt.pachka)then
-	open(iunit,file='lhcd/pressF.dat',position="append")
-	do vivod=1,n
-!!	write(iunit,*)time,vivod,f(vivod)
-	end do
-	end if
-        allocate(fj(n+2))
-        fj(1)=ybeg
-        fj(n+2)=yend
-        do i=1,n
-         fj(i+1)=y(i)
-        end do
-        do i=2,i0-1
+
+      do i=1,n+1
+        y(i+1)=y1(i)
+      end do
+
+        do i=1,i0
          if(vij(i,j).lt.xend) then
           call lock(x,n+2,vij(i,j),klo,khi,ierr)
           if(ierr.eq.1) then
@@ -394,18 +429,32 @@ c      pause
            pause
            stop
            end if
-          call linf(x,fj,vij(i,j),fij0(i,j,k),klo,khi)
+          call linf(x,y,vij(i,j),fij0(i,j,k),klo,khi)
          else
           fij0(i,j,k)=zero
          end if
         end do
-        deallocate(fj)
-        deallocate(y,x,xx,a,b,c,f)
+
+c        call integral(1,i0,vij(:,j),fij0(:,j,k),fout1)
+c        if(k.eq.1) then
+c            open(8,file='RESULT2019/part01.dat',position="append")
+c            write(8,*) tim1, fout1
+c            close(8)
+c        elseif (k.eq.2) then
+c            open(9,file='RESULT2019/part02.dat',position="append")
+c            write(9,*) tim1, fout1
+c            close(9)
+c        endif
+
+        deallocate(y,x,xx,a,b,c,f,D1,y1)
+
         allocate(fj(i0),dfj(i0))
         do i=1,i0
          fj(i)=fij0(i,j,k)
          dfj(i)=zero
         end do
+
+
         do i=1,i0
          if(i.eq.1) then
           dfj(i)=zero
@@ -415,39 +464,44 @@ c      pause
           dfj(i)=0.5d0*(fj(i+1)-fj(i-1))/vij(2,j)
          end if
         end do
+	
         ii=0
         ibeg=0
-        do i=i0-1,1,-1
-         if(dfj(i).gt.zero) then
-c          write(*,*) '#1 positive derivs'
-c          write(*,*) '#1 df>0: i,j,k=',i,j,k
-c          write(*,*) '#1 dfj(i),i,j,k=',dfj(i),i,j,k
-c          write(*,*)
-          fij0(i,j,k)=fij0(i+1,j,k)
-          ii=i
-         end if
-         if(fij0(i,j,k).lt.fij0(i+1,j,k)) then 
-          fij0(i,j,k)=fij0(i+1,j,k)
-          ii=i
-         end if
-        end do
+
+c        do i=i0-1,1,-1
+c         if(dfj(i).gt.zero) then
+cc          write(*,*) '#1 positive derivs'
+cc          write(*,*) '#1 df>0: i,j,k=',i,j,k
+cc          write(*,*) '#1 dfj(i),i,j,k=',dfj(i),i,j,k
+cc          write(*,*)
+c          fij0(i,j,k)=fij0(i+1,j,k)
+c          ii=i
+c         end if
+c         if(fij0(i,j,k).lt.fij0(i+1,j,k)) then 
+c          fij0(i,j,k)=fij0(i+1,j,k)
+c          ii=i
+c         end if
+c       end do 
+!     
         ibeg=ii
-!
-        if(ibeg.gt.0) then
-         call integral(ibeg,i0,vj,fj,fout1)
-         do i=1,i0
-          fj(i)=fij0(i,j,k)
-         end do
-         call integral(ibeg,i0,vj,fj,fout2)
-         do i=ibeg,i0
-          fij0(i,j,k)=fj(i)*fout1/fout2
-         end do
+
+c        if(ibeg.gt.0) then
+c         call integral(ibeg,i0,vj,fj,fout1)
+c         do i=1,i0
+c         fj(i)=fij0(i,j,k)
+c         end do
+c         call integral(ibeg,i0,vj,fj,fout2)
+c         do i=ibeg,i0
+c          fij0(i,j,k)=fj(i)*fout1/fout2
+c         end do
 !!         write(*,*)'#1 j,k,ibeg=',j,k,ibeg
 !!         write(*,*)'#1 v(ibeg)=',vj(ibeg),' f1/f2=',fout1/fout2
-        end if
-!
-        deallocate(vj,fj,dfj)
+c        end if
 
+!!!!	write(*,*)'time=',tau1
+
+
+        deallocate(vj,fj,dfj)
        end do
 !!!!!!!!!!!!!!!!!
 !
@@ -471,9 +525,8 @@ c          write(*,*)
          n=n+1
          h=xend/dble(n+1)
         end if
-        allocate(y(n),x(n+2),xx(n+1),a(n),b(n),c(n),f(n))
-	allocate(xxm(n+1),xxp(n+1))
-!!	write(*,*)'OSHIBKA2, j=',j
+        allocate(y(n+2),x(n+2),xx(n+1),a(n+1),b(n+1),c(n+1),f(n+1)
+     &,y1(n+1))
 !!!!!! grid !!!!!!!!!
 !!       shift=h*0.1d0 !0.01d0
         do i=1,n+2
@@ -481,29 +534,58 @@ c          write(*,*)
         end do
         do i=1,n+1
          xx(i)=h/2.d0+h*dble(i-1) !+shift
-!	 xxm(i)=xx(i)-h/2d0
-!	 xxp(i)=xx(i)+h/2d0
-        end do
-	if (nomer.gt.9) then 
-	open(iunit,file='RESULT2019/xxx.dat',position="append")
-!	check1=xx(4)-h/2d0-xx(4)+h/2d0
-!	check2=xx(5)+h/2d0-xxp(5)
-!	check3=xx(5)-h/2d0-xxm(5)
-!	do i=1,n
-!	write(iunit,*)xx(1)-h/2d0-xxx(1),xx(1)+h/2d0-xxx(2)
-!	write(iunit,*)xx(2)-h/2d0-xxx(2),xx(2)+h/2d0-xxx(4)
-!	write(iunit,*)xx(2)-xxx(3),xx(1)-xxx(1)
-!	write(iunit,*)check1,check2,check3
-!	end do
-	end if
-	close(iunit)
+        enddo
+
+	
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        allocate(D1(n+1),D2(101))
+
+        D2=dijk(:,j,k)
+
+        do i=1,n+1
+        if(xx(i).gt.vrjnew(iptnew,j,k)) then
+         D1(i)=zero
+        else
+        call lock(vrjnew(:,j,k),iptnew,xx(i),klo,khi,ierr)
+        if(ierr.eq.1) then
+         write(*,*)'lock error in finction d(x)'
+         write(*,*)'j=',j,' v=',xx(i)
+         write(*,*)'vj(1)=',vrjnew(1,j,k),' vj(i0)='
+     & ,vrjnew(iptnew,j,k)
+         pause
+         stop
+        end if
+        call polint(vrjnew(klo,j,k),dijk(klo,j,k),2,xx(i),D1(i),ierr)
+        
+c        D1(i)=dij(klo,j,k)
+        
+        if(D1(i).lt.0d0) then
+            write(*,*)'diff is  negative; check drivencurrent 558'
+            write(*,*) 'xx(i)=', xx(i), 'D1(i)=', D1(i)
+            pause
+            stop
+        endif
+        
+        endif
+        enddo
+
+c1
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         allocate(vj(i0),fj(i0))
         do i=1,i0
          vj(i)=vij(i,j)
          fj(i)=fij(i,j,k)
         end do
-        do i=1,n
-         call lock(vj,i0,x(i+1),klo,khi,ierr)
+
+
+
+
+        do i=1,n+2
+         call lock(vj,i0,x(i),klo,khi,ierr)
          if(ierr.eq.1) then
           write(*,*)'lock error #3 in finction fokkerplanck'
           write(*,*)'j=',j,' v=',x(i+1)
@@ -511,78 +593,47 @@ c          write(*,*)
           pause
           stop
          end if
-         call linf(vj,fj,x(i+1),y(i),klo,khi)
+         call linf(vj,fj,x(i),y(i),klo,khi)
         end do
+        
         deallocate(fj)
+
+
         ybeg=fij(1,j,k)  !boundary conditions
-        yend=zero
+        yend=fij(i0,j,k)
         alfa2=znak*enorm(j)
-!!!!!!!!!!!!!EVALUATING DIFFUSION!!!!!!!!!!!!!!!!!!
-!!	write(*,*)'OSHIBKA, j=',j
-	if (nomer.gt.9) then 
-	open(iunit,file='RESULT2019/dddd.dat',position="append")
-	end if
-        allocate(d1(n+1),d2(n+1),d3(n+1))	
-	do i=1,n+1
-	call lock(vj,i0,xx(i),klo1,khi1,ierr1)
-	call lock(vj,i0,xx(i)-h/2d0,klo2,khi2,ierr2)
-	call lock(vj,i0,xx(i)+h/2d0,klo3,khi3,ierr3)
-      	if(ierr1.eq.1) then
-	write(*,*)'lock error in finction d2(x)'
-	write(*,*)'j=',j,' v=',xx(i)
-	write(*,*)'klo1=',klo1,'khi1=',khi1,'i=',i
-	write(*,*)'vj(1)=',vj(1),' vj(i0)=',vj(i0)
-	pause
-	stop
-      	end if
-      	if(ierr2.eq.1) then
-	write(*,*)'lock error in finction d2(x)'
-	write(*,*)'j=',j,' v=',xxm(i)
-	write(*,*)'klo2=',klo2,'khi2=',khi2,'i=',i
-	write(*,*)'vj(1)=',vj(1),' vj(i0)=',vj(i0)
-	pause
-	stop
-      	end if
-      	if(ierr3.eq.1) then
-	write(*,*)'lock error in finction d2(x)'
-	write(*,*)'j=',j,' v=',xxp(i)
-	write(*,*)'klo3=',klo3,'khi3=',khi3,'i=',i
-	write(*,*)'vj(1)=',vj(1),' vj(i0)=',vj(i0)
-	pause
-	stop
-      	end if
-	d1(i)=dij(klo1,j,k)
-	d2(i)=dij(klo2,j,k)
-	d3(i)=dij(klo3,j,k)	
-	if (nomer.gt.9) then 
-!	write(iunit,*)d1(i),d2(i),d3(i)
-	end if
-	end do
-	if (nomer.gt.9) then 
-	close(iunit)
-	end if
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!solve problem
+!!!!!!!         START ABCCOEF SOLVING           !!!!!!!
+
+        do i=1,n+1
+            y1(i)=y(i+1)
+        end do
+        
         do it=1,nt
-         call abccoef(a,b,c,f,y,dt,n,ybeg,yend,xx,h,d1,d2,d3)
-         call tridag(a,b,c,f,y,n)
-!!         t=dt*dble(it)
-        end do
-        deallocate(d1,d2,d3)
-        allocate(fj(n+2))
-        fj(1)=ybeg
-        fj(n+2)=yend
-        do i=1,n
-         fj(i+1)=y(i)
-        end do
-	if (nomer.gt.9) then 
-	open(iunit,file='RESULT2019/distribution.dat',position="append")
-	do i=1,n
-!	write(iunit,*)i,fj(i+1)
-	end do
-	end if
-	close(iunit)
-        do i=2,i0-1
+
+         call abccoef(a,b,c,f,y1,dt,n+1,ybeg,yend,x,xx,h,D1)
+         call tridag(a,b,c,f,y1,n+1)
+
+
+        
+        do i=1,n+1
+        if(y1(i).lt.0.d0) then
+        if((y1(i) + epsilon(y1(i))).gt.0.d0) then
+        y1(i)=0.d0
+        else
+        write(*,*)'y(i)=',y1(i),' lt negative epsilon=',epsilon(y1(i))
+        pause
+        stop
+        endif
+        endif
+        enddo
+           
+        enddo
+
+      do i=1,n+1
+        y(i+1)=y1(i)
+      end do
+        
+        do i=1,i0
          if(vij(i,j).lt.xend) then
           call lock(x,n+2,vij(i,j),klo,khi,ierr)
           if(ierr.eq.1) then
@@ -592,19 +643,61 @@ c          write(*,*)
            pause
            stop
           end if
-          call linf(x,fj,vij(i,j),fij(i,j,k),klo,khi)
+          call linf(x,y,vij(i,j),fij(i,j,k),klo,khi)
          else
           fij(i,j,k)=zero
          end if
-        end do
-        deallocate(fj)
+         
+        enddo
+        
+        
+!        if((tim1 > 0.03109d0).and.(pachka.eq.10)) then
+!c        call integral(1,i0,vij(:,j),fij(:,j,k),fout1)
+!        if((k.eq.1).and.(j.eq.nr)) then
+!            open(8,file='RESULT2019/xyhdt1.dat',position="append")
+!            open(11,file='RESULT2019/xxd1.dat',position="append")            
+!c            write(8,10) tim1, fout1
+!            do i=1,n+2
+!            write(8,10) x(i), y(i), h, dt
+!            enddo
+!            
+!            do i=1,n+1
+!            write(11,13) xx(i), D1(i), alfa2
+!            enddo
+!            
+!            close(8)
+!            close(11)
+!        elseif((k.eq.2).and.(j.eq.nr)) then
+!            open(9,file='RESULT2019/xyhdt2.dat',position="append")
+!            open(12,file='RESULT2019/xxd2.dat',position="append")
+!c            write(9,10) tim1, fout1
+!
+!            do i=1,n+2
+!            write(9,10) x(i), y(i), h, dt
+!            enddo
+!            
+!            do i=1,n+1
+!            write(12,13) xx(i), D1(i), alfa2
+!            enddo
+!            close(9)
+!            close(12)
+!        endif
+!        
+!        pause
+!        endif
+10      format(4F20.16)
+13      format(3F20.16)
 
-        deallocate(y,x,xx,xxm,xxp,a,b,c,f)
+
+
+        deallocate(y,x,xx,a,b,c,f,D1,D2,y1)
         allocate(fj(i0),dfj(i0))
+
         do i=1,i0
          fj(i)=fij(i,j,k)
          dfj(i)=zero
         end do
+
         do i=1,i0
          if(i.eq.1) then
           dfj(i)=zero
@@ -616,379 +709,282 @@ c          write(*,*)
         end do
         ii=0
         ibeg=0
-        do i=i0-1,1,-1
-         if(dfj(i).gt.zero) then
-c          write(*,*) '#2 positive derivs'
-c          write(*,*) '#2 df>0: i,j,k=',i,j,k
-c          write(*,*) '#2 dfj(i),i,j,k=',dfj(i),i,j,k
-c          write(*,*) '#2 fij=',fij(i,j,k)
-c          write(*,*)
-          fij(i,j,k)=fij(i+1,j,k)
-          dfij(i,j,k)=dfij(i+1,j,k)
-          ii=i
-         end if
-         if(fij(i,j,k).lt.fij(i+1,j,k)) then
-          fij(i,j,k)=fij(i+1,j,k)
-          dfij(i,j,k)=dfij(i+1,j,k)
-          ii=i
-         end if
-        end do
+
+c	do i=i0-1,1,-1
+c         if(dfj(i).gt.zero) then
+cc          write(*,*) '#2 positive derivs'
+cc          write(*,*) '#2 df>0: i,j,k=',i,j,k
+cc          write(*,*) '#2 dfj(i),i,j,k=',dfj(i),i,j,k
+cc          write(*,*) '#2 fij=',fij(i,j,k)
+cc          write(*,*)
+c          fij(i,j,k)=fij(i+1,j,k)
+c          dfij(i,j,k)=dfij(i+1,j,k)
+c          ii=i
+c         end if
+c         if(fij(i,j,k).lt.fij(i+1,j,k)) then
+c          fij(i,j,k)=fij(i+1,j,k)
+c          dfij(i,j,k)=dfij(i+1,j,k)
+c          ii=i
+c         end if
+c        end do
         ibeg=ii
-!
-        if(ibeg.gt.0) then
-         call integral(ibeg,i0,vj,fj,fout1)
-         do i=1,i0
-          fj(i)=fij(i,j,k)
-          dfj(i)=dfij(i,j,k)
-         end do
-         call integral(ibeg,i0,vj,fj,fout2)
-         do i=ibeg,i0
-          fij(i,j,k)=fj(i)*fout1/fout2
-          dfij(i,j,k)=dfj(i)*fout1/fout2
-         end do
-!!         write(*,*)'#2 j,k,ibeg=',j,k,ibeg
-!!         write(*,*)'#2 v(ibeg)=',vj(ibeg),' f1/f2=',fout1/fout2
-        end if
-!
+
+c        if(ibeg.gt.0) then
+c         call integral(ibeg,i0,vj,fj,fout1)
+c         do i=1,i0
+c          fj(i)=fij(i,j,k)
+c          dfj(i)=dfij(i,j,k)
+c         end do
+c         call integral(ibeg,i0,vj,fj,fout2)
+c         do i=ibeg,i0
+c          fij(i,j,k)=fj(i)*fout1/fout2
+c          dfij(i,j,k)=dfj(i)*fout1/fout2
+c         end do
+c!!         write(*,*)'#2 j,k,ibeg=',j,k,ibeg
+c!!         write(*,*)'#2 v(ibeg)=',vj(ibeg),' f1/f2=',fout1/fout2
+c        end if
+
+
         deallocate(vj,fj,dfj)
 
+        enddo
+        
        end do
-      end do
-!
+
+
+
       end
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      subroutine abccoef(a,b,c,f,y,dt,n,ybeg,yend,xx,h,d1,d2,d3)
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!    
+      subroutine ABCcoef(A,B,C,f,Y,k,n,ybeg,yend,x,xx,h,df)
       implicit none
-      integer i,n,iunit,iunit2
-      real*8 a(n),b(n),c(n),f(n),y(n),d1(n+1),d2(n+1),d3(n+1)
-      real*8 a1(n),b1(n),c1(n),f1(n),a2(n),b2(n),c2(n),f2(n)
-      real*8 dt,kinv,rs,rmink,rplusk,q,qf,r1,rmink2,rplusk2,kinv2
-      real*8 ybeg,yend,xx(*),h,r,kappa,sum,bmin,bplus,sum2,sum3,sum4
-      real*8 dc,as(n+1),k,k2,d
-      external kinv,rs,rmink,rplusk,q,kinv2,rmink2,rplusk2,d
-
-      sum=(kinv(xx(1)-h/2d0,d2(1))+kinv(xx(1)+h/2d0,d3(1)))*h/2d0
-      as(1)=h/sum
-
-      sum=(kinv(xx(2)-h/2d0,d2(2))+kinv(xx(2)+h/2d0,d3(2)))*h/2d0
-      as(2)=h/sum
-
-      r=h/2d0*dabs(rs(xx(1)+h/2d0,d3(1)))/k(xx(1)+h/2d0,d3(1))
-      kappa=1d0/(1d0+r)
-      sum=(rmink(xx(1),d1(1))+rmink(xx(2),d1(2)))*h/2d0
-      bmin=sum/h
-
-      sum=(rplusk(xx(1),d1(1))+rplusk(xx(2),d1(2)))*h/2d0
-      bplus=sum/h
-
-      sum=qf(xx(2))-qf(xx(1))
-      dc=sum/h
-
-      a(1)=as(1)*(kappa/h**2-bmin/h)
-      c(1)=as(2)*(kappa/h**2+bplus/h)
-      b(1)=-(1d0/dt+a(1)+c(1)+dc)
-      f(1)=-y(1)/dt-a(1)*ybeg
-	open(iunit,file='RESULT2019/RAZNICA.dat',position="append")
-      do i=2,n
-!       sum=1d0      !(kinv(xx(i+1)-h/2d0,d2(i+1)))+kinv(xx(i+1)+h/2d0,d3(i+1)))*h/2d0
-!      sum2=(rplusk(xx(i),d1(i))+rplusk(xx(i+1),d1(i+1)))*h/2d0
-      !sum2=sum2*h/2d0
-!      sum3=(rplusk2(xx(i),d1(i))+rplusk2(xx(i+1),d1(i+1)))*h/2d0
-      !sum3=sum3*h/2d0
-!	sum4=sum3-sum2
-!        if(dabs(sum4).gt.0d0) then
-!	write(iunit,*)sum2,sum3,sum4
-!	end if
-       sum=(kinv(xx(i+1)-h/2d0,d2(i+1))+kinv(xx(i+1)+h/2d0,d3(i+1)))
-       sum=sum*h/2d0
-       as(i+1)=h/sum
-       r=h/2d0*dabs(rs(xx(i)+h/2d0))/k(xx(i)+h/2d0,d3(i))
-       kappa=1d0/(1d0+r)
-       sum=(rmink(xx(i),d1(i))+rmink(xx(i+1),d1(i+1)))*h/2d0
-       bmin=sum/h
-       sum=(rplusk(xx(i),d1(i))+rplusk(xx(i+1),d1(i+1)))*h/2d0
-       bplus=sum/h
-       sum=qf(xx(i+1))-qf(xx(i))
-       dc=sum/h
-       a(i)=as(i)*(kappa/h**2-bmin/h)
-       c(i)=as(i+1)*(kappa/h**2+bplus/h) 
-       b(i)=-(1d0/dt+a(i)+c(i)+dc) 
-       f(i)=-y(i)/dt
-
-!       sum=(kinv2(xx(i+1)-h/2d0,d2(i+1))+kinv2(xx(i+1)+h/2d0,d3(i+1)))
-!       sum=sum*h/2d0
-!       as(i+1)=h/sum
-!       r=h/2d0*dabs(rs(xx(i)+h/2d0))/k2(xx(i)+h/2d0,d3(i))
-!       kappa=1d0/(1d0+r)
-!       sum=(rmink2(xx(i),d1(i))+rmink2(xx(i+1),d1(i+1)))*h/2d0
-!       bmin=sum/h
-!       sum=(rplusk2(xx(i),d1(i))+rplusk2(xx(i+1),d1(i+1)))*h/2d0
-!       bplus=sum/h
-!       sum=qf(xx(i+1))-qf(xx(i))
-!       dc=sum/h
-!       a1(i)=as(i)*(kappa/h**2-bmin/h)
-!       c1(i)=as(i+1)*(kappa/h**2+bplus/h) 
-!       b1(i)=-(1d0/dt+a(i)+c(i)+dc) 
-!       f1(i)=-y(i)/dt
-
-!       a2(i)=a1(i)-a(i)
-!       c2(i)=c1(i)-c(i)
-!       b2(i)=b1(i)-b(i)
-!       f2(i)=f1(i)-f(i)
-!	open(iunit2,file='RESULT2019/abcr.dat',position="append")
-!        if(dabs(c2(i)).gt.0d0) then
-!	write(iunit,*)f2(i),f1(i),f(i)
-!	end if
-!	close(iunit2)
-      end do
-	close(iunit)
-      f(n)=f(n)-c(n)*yend
-      a(1)=0d0
-      c(n)=0d0
-      end
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      real*8 function rplusk(x,dif)
-      implicit none
-      integer iunit
-      real*8 x,k,rs,dif,d,razn
-      rplusk=0.5d0*(rs(x)+dabs(rs(x)))/k(x,dif)
-      end
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      real*8 function rplusk2(x,dif)
-      implicit none
-      integer iunit
-      real*8 x,k2,rs,dif,d,razn
-      rplusk2=0.5d0*(rs(x)+dabs(rs(x)))/k2(x,dif)
-      end
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      real*8 function rmink(x,dif)
-      implicit none
-      integer iunit
-      real*8 x,k,rs,dif,d,razn
-      rmink=0.5d0*(rs(x)-dabs(rs(x)))/k(x,dif)
-      end
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      real*8 function rmink2(x,dif)
-      implicit none
-      integer iunit
-      real*8 x,k2,rs,dif,d,razn
-      rmink2=0.5d0*(rs(x)-dabs(rs(x)))/k2(x,dif)
-      end
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      real*8 function rs(x)
-      implicit none
-      real*8 x
-      real*8 alfa2
-      common/ef/ alfa2
-       rs=1d0/x**2-alfa2
-      end
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      real*8 function q(x)
-      implicit none
-      real*8 x
-      q=2d0/x**3
-      end
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      real*8 function qf(x)
-      implicit none
-      real*8 x
-      qf=-1d0/x**2
-      end
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      real*8 function k(x,dif)
-      implicit none
-      integer iunit
-      real*8 x,dif,d,razn
-!	razn=dif-d(x)
-!	open(iunit,file='RESULT2019/kkk.dat',position="append")
-!	if(dabs(razn).gt.0d0) then
-!	write(iunit,*)razn
-!	end if
-!	close(iunit)
-
-      k=dif+1d0/x**3
-      end
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      real*8 function k2(x,dif)
-      implicit none
-      integer iunit
-      real*8 x,dif,d,razn
-!	razn=dif-d(x)
-!	open(iunit,file='RESULT2019/kkk.dat',position="append")
-!	if(dabs(razn).gt.0d0) then
-!	write(iunit,*)razn
-!	end if
-!	close(iunit)
-
-      k2=d(x)+1d0/x**3
-      end
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      real*8 function kinv(x,dif)
-      implicit none
-      integer iunit
-      real*8 x,dif,razn,d
-      kinv=x**3/(dif*x**3+1d0)
-      end
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      real*8 function kinv2(x,dif)
-      implicit none
-      integer iunit
-      real*8 x,dif,razn,d,kino
-      kinv2=x**3/(d(x)*x**3+1d0)
-!	kino=x**3/(dif*x**3+1d0)
-!	razn=kino-kinv2
-!	open(iunit,file='RESULT2019/kino.dat',position="append")!
-!	if(dabs(razn).gt.0d0) then
-!	write(iunit,*)razn
-!	end if
-!	close(iunit)
-      end
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-      subroutine ddc(diffusion)
-      implicit none
-      common/testf/ tcur
-
-      integer ntau,tc,koltoch,i,j,k,klo
-      real*8 curtime,tcur,zero,dij
-      real*16 tau0,spacing,curtime0
-      parameter(tau0=3.000990745207882E-002, zero=0.d0)
-      common/lh/dij(1002,100,2)
-      real*8 b,b1,b2,d,diffusion
-!      real*8,dimension(:),allocatable:: diffusion
-      integer i1,iunit6
-      b1=0
-      b2=60
-      j=10
-      k=1
-!      allocate (diffusion(500))
-! write(*,*)'time=',tcur
-! do tc=1,koltoch
-!       spacing=0.008/koltoch
-!       curtime=tau0+spacing*tc!-0.0002
-!      curtime0=curtime+0.000000001
-!      if((tcur-curtime)*(tcur-curtime0).lt.zero) then
-!       if((tcur-0.0301)*(tcur-0.0302).lt.zero) then
-!       open(iunit6,file='RESULT2019/ddc.dat',position="append")
-!      do i1=1,500
-!      b=b1+(b2/500)*(i1-1)
-!      diffusion(i1)=d(b)
-!       do i=1,1001
-!        write(iunit6,*) i, diffusion
-!       end do
-!      write(iunit6,*)
-!       close(iunit6)
-!       end if
-! end do
-! !     deallocate(diffusion)
-      end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      real*8 function d(x)
-      implicit none
-      integer i0
-      parameter(i0=1002)
-      real*8 vij,fij0,fij,dfij,dij,enorm,fst
-      common/lh/vij(i0,100),fij0(i0,100,2),fij(i0,100,2),dfij(i0,100,2)
-     &,dij(i0,100,2),enorm(100),fst(100)
-      real*8,dimension(:),allocatable:: vvj,ddj
-      integer klo,khi,ierr
-      real*8 d0,zero,x
-      integer jindex,kindex,k,j,i
+      integer i,n,jindex,kindex
+      real*8 f(n),Y(n),k,df(n),d0
+      real*8 ybeg,yend,x(*),h,xx(*)
+      real*8 C1,B1,z,w,r,dlt,alfa2
+      real*8 tmp1,tmp2,tmp3,A(n),B(n),C(n)
       common/dddql/ d0,jindex,kindex
-      parameter(zero=0.d0)
-      d=zero
-      if(d0.eq.zero) return
-      j=jindex
-      if(x.ge.vij(i0,j)) return
-      k=kindex
-      allocate(vvj(i0),ddj(i0))
-!      write(*,*)'function d(x): k=',k,' j=',j
-      do i=1,i0
-       vvj(i)=vij(i,j)
-       ddj(i)=dij(i,j,k)
-      end do
-      call lock(vvj,i0,x,klo,khi,ierr)
-      if(ierr.eq.1) then
-       write(*,*)'lock error in finction d2(x)'
-       write(*,*)'j=',j,' v=',x
-       write(*,*)'vj(1)=',vvj(1),' vj(i0)=',vvj(i0)
-       pause
-       stop
-      end if
-      d=ddj(klo)
-!!	call ddc(d)
-!!!      call linf(vvj,ddj,x,d,klo,khi)
+      common/ef/ alfa2 
+      external C1,w,B1,dlt
+
+
+        r=k/h
+       do i=1,n-1
+      
+      tmp1=dlt(xx(i),h,df(i))*B1(xx(i))
+      A(i)=-r*(C1(xx(i),df(i))/h-tmp1)
+
+      tmp2=C1(xx(i+1),df(i+1))/h-dlt(xx(i+1),h,df(i+1))*B1(xx(i+1))
+      tmp3=(1.d0-dlt(xx(i),h,df(i)))*B1(xx(i))
+      B(i)=r*(tmp2+tmp3+C1(xx(i),df(i))/h)+1.d0
+	
+      tmp1=(1.d0-dlt(xx(i+1),h,df(i+1)))*B1(xx(i+1))
+      C(i)=-r*(tmp1+C1(xx(i+1),df(i+1))/h)
+
+            f(i)=Y(i)
+      enddo
+
+
+ 
+        f(1)=f(1)-A(1)*ybeg
+        f(n)=Y(n)
+        A(n)=-r*(C1(xx(n),df(n))/h-dlt(xx(n),h,df(n))*B1(xx(n)))
+        B(n)=r*((1.d0-dlt(xx(n),h,df(n)))*B1(xx(n))+C1(xx(n),df(n))/h)+1.d0
+        C(n)=0.d0
+
+
+ 
+        !f(1)=f(1)-A(1)*ybeg
+        !f(n)=f(n)-C(n)*yend !yend in either way=0 all the time
+
+c        C(1)=0.d0
+c        B(1)=1.d0
+c        A(N)=0.d0
+c        B(N)=1.d0
+
+        
+c        if (kindex.eq.1) then
+c        tmp1=(1.d0-dlt(xx(n-1),h,df(n-1)))*B1(xx(n-1))
+c        B(N)=r*(tmp1+C1(xx(n-1),df(n-1))/h)+1.d0
+        
+c        tmp1=dlt(xx(n-1),h,df(n-1))*B1(xx(n-1))
+c        A(n)=-r*(C1(xx(n-1),df(n-1))/h-tmp1)
+
+c        tmp1=(1.d0-dlt(xx(1),h,df(1)))*B1(xx(1))
+c        C(1)=-r*(tmp1+C1(xx(1),df(1))/h)
+
+c        tmp1=dlt(xx(1),h,df(1))*B1(xx(1))
+c        tmp2=(1-dlt(xx(1),h,df(1)))*B1(xx(1))+C2(xx(1),df(1))/h
+c        B(1)=r*(C1(xx(1),df(1))/h-tmp1)+1.d0
+cc        elseif (kindex.eq.2) then
+c        tmp1=(1.d0-dlt(xx(n-1),h,df(n-1)))*B1(xx(n-1))
+cc        tmp2=C1(xx(n-1)+h,0.d0)/h-dlt(xx(n-1)+h,h,0.d0)*B1(xx(n-1)+h)
+c        B(N)=r*(tmp1+C1(xx(n-1),df(n-1))/h)+1.d0
+c        C(1)=0.d0
+c        B(1)=1.d0
+c        f(1)=ybeg
+c        else
+c        write(*,*) 'error boundary cond. drvcrrnt 830'
+c        endif
+c        tmp1=dlt(x(1)+h/2.d0,h,df(1))*B1(x(1)+h/2.d0)
+c        B(1)=r*(C1(x(1)+h/2.d0,df(1))/h-tmp1)+1.d0
+c        tmp1=(1.d0-dlt(x(n)-h/2.d0,h,df(n-1)))*B1(x(n)-h/2.d0)
+c        B(N)=r*(tmp1+C1(x(n)-h/2.d0,df(n-1))/h)+1.d0
+        end
+!cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+
+        real*8 function B1(xx)
+        implicit none
+        real*8 xx,alfa2,beta
+        common/ef/ alfa2 
+            B1=-alfa2+1.d0/(xx*xx)
+        end function
+
+        
+        real*8 function C1(xx,dif)
+        implicit none
+        real*8 xx,dif
+            C1=dif+1.d0/(xx*xx*xx)
+        end function
+        
+        
+        real*8 function w(xx,h,dif)
+        implicit none
+        real*8 xx,h,B1,C1,dif
+           w=h*B1(xx)/C1(xx,dif)
+        end function
+        
+        
+        real*8 function dlt(xx,h,dif)
+        implicit none
+        real*8 xx,h,B1,C1,w,dif
+c        if(w(xx,h,dif).gt.700.d0) then
+c        dlt=1.d0/w(xx,h,dif)
+c        elseif(w(xx,h,dif).lt.-730.d0) then
+c        dlt=1.d0/w(xx,h,dif)+1.d0
+c        else
+        dlt=1.d0/w(xx,h,dif)-1.d0/(dexp(w(xx,h,dif))-1.d0)
+c        endif
+        end function
+
+
+c        real*8 function z(xx,h,dif)
+c        implicit none
+c        real*8 xx,h,w,dif
+c        if(w(xx,h,dif).lt.0d0) then
+c            z=w(xx,h,dif)/(dexp(w(xx,h,dif))-1d0)
+c        elseif(w(xx,h,dif).ge.0d0) then
+c            z=dexp(-w(xx,h,dif))*w(xx,h,dif)/(1d0-dexp(-w(xx,h,dif)))
+c        endif
+c        end function
+
 !
-!      write(*,*)'klo=',klo,' khi=',khi
-!      write(*,*)'vj(klo)=',vvj(klo),' vj(khi)=',vvj(khi)
-!      write(*,*)'x=',x,' d=',d
+!      subroutine abccoef(a,b,c,f,y,dt,n,ybeg,yend,x,h
+!     *,dif,ddif)
+!      implicit none
+!      integer i,n,jindex,kindex 	
+!      real*8 a(n),b(n),c(n),f(n),y(n),dt,dif(n),ddif(n)
+!      real*8 ybeg,yend,x(*),h,temp
+!      real*8 a1,b1,c1,tmp1,tmp2,dDdX,tcur,d0
+!      external a1,b1,c1,dDdX
+!      common/dddql/ d0,jindex,kindex
+!      common/b1dif/ temp
+
+!      do i=1,n
+!    
+!      a(i)=-(2d0*dt*a1(x(i),dif(i))-dt*h*b1(x(i),dif(i),ddif(i)))
+!    
+!      b(i)=4d0*h**2+4d0*dt*a1(x(i),dif(i))-2d0*h**2*dt*c1(x(i))
+!   
+!      c(i)=-(2d0*dt*a1(x(i),dif(i))+dt*h*b1(x(i),dif(i),ddif(i)))
+
+ 
+!          if(i.eq.1) then
+!      f(1)=ybeg
+!             else if(i.eq.n) then
+!      f(n)=yend
+!             else
+!      tmp1=(4d0*h**2-4d0*dt*a1(x(i),dif(i))
+!     * +2d0*h**2*dt*c1(x(i)))*y(i)
+!      tmp2=(2d0*dt*a1(x(i),dif(i))
+!     *-dt*h*b1(x(i),dif(i),ddif(i)))*y(i-1)
+!      f(i)=(2d0*dt*a1(x(i),dif(i))
+!     *+dt*h*b1(x(i),dif(i),ddif(i)))*y(i+1)+tmp1+tmp2
+!             end if
+!      enddo
+!	c(1)=0d0
+!	b(1)=1
+ !       a(n)=0d0
+!	b(n)=1
+!	end
+      
+!cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+
+!FUNCTION a1
+
+!      real*8 function a1(x,dif)
+!      implicit none
+!      real*8 x,t,tlock,d,dif
+!      !common /time/ tlock
 !
-      deallocate(vvj,ddj)
-      end
+!	a1=dif+1d0/x**3
+ !     end
+
+!FUNCTION b1
+
+!	real*8 function b1(x,dif,ddif)
+ !     implicit none
+ !     real*8 x,t,tlock,dDdX,d,h,alfa2
+!      real*8 dif,ddif,temp
+!      !common /time/ tlock
+!      common/ef/ alfa2 
+!      common/b1dif/ temp
+
+!	b1=(1d0/x**2-3d0/x**4)-alfa2+ddif
+
+ !     end
+
+!FUNCTION c1
+
+!	real*8 function c1(x)
+ !     implicit none
+ !     real*8 x,t,d
+ !     !common /time/ tlock
+!	c1=-2d0*1d0/x**3
+ !     end
+!cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc  
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
       subroutine tridag(a,b,c,r,u,n)
       implicit none
       integer n,nmax
-      double precision a(n),b(n),c(n),r(n),u(n)
-      parameter (nmax=1000000)
+	real*8 r(n),u(n)
+      real*8 a(n),b(n),c(n),eps
+      parameter (nmax=1000000,eps=1.d-200)
       integer j
       double precision bet,gam(nmax)
+
+
       if(b(1).eq.0.d0)pause 'tridag: rewrite equations'
       bet=b(1)
       u(1)=r(1)/bet
       do 11 j=2,n
         gam(j)=c(j-1)/bet
         bet=b(j)-a(j)*gam(j)
-        if(bet.eq.0.d0) then
-	write(*,*)'b(j)=',b(j),'a(j)=',a(j),'gam(j)=',gam(j)
-	pause 'tridag failed'
-	end if
+        if(bet.eq.0.d0)pause 'tridag failed'
         u(j)=(r(j)-a(j)*u(j-1))/bet
 11    continue
       do 12 j=n-1,1,-1
         u(j)=u(j)-gam(j+1)*u(j+1)
 12    continue
-      return
-      end
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-      
-      subroutine qromb(func,a,b,ss)
-      implicit none
-      integer jmax,jmaxp,k,km
-      double precision a,b,func,ss,eps
-      external func
-      parameter (eps=1.d-6, jmax=200, jmaxp=jmax+1, k=5, km=k-1)
-cu    uses polint,trapzd
-      integer j
-      double precision dss,h(jmaxp),s(jmaxp)
-      h(1)=1.d0
-      do 11 j=1,jmax
-          call trapzd(func,a,b,s(j),j)
-          if (j.ge.k) then
-              call polint(h(j-km),s(j-km),k,0.d0,ss,dss)
-              if (abs(dss).le.eps*abs(ss)) return
-          endif
-          s(j+1)=s(j)
-          h(j+1)=0.25d0*h(j)
-11    continue
-      pause 'too many steps in qromb'
+
+	return
+
       end
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
@@ -1091,3 +1087,44 @@ c			(pereverzev 23-oct-99)
       aiint=gp2*ipol(jk)*(hro*aiint+dr*ya)
       end
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+      subroutine integral11(f,n,h1,fout,fbeg,fend)
+      integer i,n
+      Real*8 h1, summ, fout, f(n),fbeg,fend
+
+      fout=0.d0
+      summ=0.d0
+      do i=1,n+2
+          if(i.eq.1) then
+                summ=summ+5.d0*fbeg/12.d0
+          elseif(i.eq.2) then
+                summ=summ+13.d0*f(1)/12.d0
+          elseif(i.eq.(n+1)) then
+                summ=summ+13.d0*f(n)/12.d0
+          elseif(i.eq.(n+2)) then
+                summ=summ+5.d0*fend/12.d0
+          else
+                summ=summ+f(i)
+          endif
+      end do
+      fout=summ*h1
+      end
+
+      subroutine part_output(x,f,t,n,k,fout)
+      integer n,k
+      real*8 x,f,t,fout
+      
+      call integral(1,n,x,f,fout1)
+
+      if(k.eq.1) then
+            open(8,file='RESULT2019/part1.dat',position="append")
+            write(8,10) t, fout1
+            close(8)
+      elseif (k.eq.2) then
+            open(9,file='RESULT2019/part2.dat',position="append")
+            write(9,10) t, fout1
+            close(9)
+      endif
+        
+10      format(2F20.16)
+      end

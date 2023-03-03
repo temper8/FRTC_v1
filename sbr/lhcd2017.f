@@ -230,10 +230,12 @@ cccc   "poloidal magnetic field":
       real*8 vij,fij0,fij,dfij,dij,enorm,fst,kofpar,timecof
       common/lh/vij(i0,100),fij0(i0,100,2),fij(i0,100,2),dfij(i0,100,2)
      &,dij(i0,100,2),enorm(100),fst(100)
+      real*8 dijk,vrjnew
+      common/t01/dijk(101,100,2),vrjnew(101,100,2),iptnew
       real*8,dimension(:),allocatable:: vvj,vdfj
       integer kpt1,kpt3
       parameter(kpt1=20,kpt3=20)
-      double precision vrj(101),dj(101),djnew(1001),vrjnew(1001)
+      double precision vrj(101),dj(101),djnew(1001)
       double precision dj2(101),d2j(101)
       common/testf/ tcur
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -243,6 +245,7 @@ cccc   "poloidal magnetic field":
         do k=1,2
          do i=1,i0
           dij(i,j,k)=zero
+          dijk(i,j,k)=zero
          end do
         end do
        end do
@@ -356,6 +359,7 @@ cccc   "poloidal magnetic field":
           plaun=p_in*anz !input power in positive spectrum
           if(plaun.eq.zero) then
            dij(:,:,1)=zero
+           dijk(:,:,1)=zero
            close(iunit)
            return
           end if
@@ -374,6 +378,7 @@ cccc   "poloidal magnetic field":
         plaun=p_in*(1.d0-anz) !input power in negative spectrum
         if(plaun.eq.zero) then
          dij(:,:,2)=zero
+         dijk(:,:,2)=zero
          close(iunit)
          return
         end if
@@ -1029,7 +1034,10 @@ c------------------------------------------
        do i=1,ipt
         vrj(i)=vgrid(i,j)/vto      !Vpar/Vt
         dj(i)=dql(i,j)*dconst*vto  !D_normir
-       end do
+      vrjnew(i,j,k)=vrj(i)
+	dijk(i,j,k)=dj(i)
+	iptnew=ipt 
+      end do
        do i=1,i0
         if(vij(i,j).ge.vmax) then
          ddout=zero
